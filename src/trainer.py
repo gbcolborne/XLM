@@ -376,6 +376,7 @@ class Trainer(object):
         params = self.params
         lang1_id = params.lang2id[lang1]
         lang2_id = params.lang2id[lang2] if lang2 is not None else None
+        labels = None
 
         if lang2 is None:
             x, lengths = self.get_batch(name, lang1, stream=True)
@@ -387,7 +388,7 @@ class Trainer(object):
             (x1, len1) = self.add_noise(x1, len1)
             x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=False)
         else:
-            (x1, len1), (x2, len2) = self.get_batch(name, lang1, lang2)
+            (x1, len1), (x2, len2), labels = self.get_batch(name, lang1, lang2)
             x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
 
         return x, lengths, positions, langs, (None, None) if lang2 is None else (len1, len2)
@@ -648,18 +649,23 @@ class Trainer(object):
         lang2_id = params.lang2id[lang2]
 
         # sample parallel sentences
-        (x1, len1), (x2, len2) = self.get_batch('align', lang1, lang2)
+        (x1, len1), (x2, len2), labels = self.get_batch('align', lang1, lang2)
         bs = len1.size(0)
         if bs == 1:  # can happen (although very rarely), which makes the negative loss fail
             self.n_sentences += params.batch_size
             return
 
-        # associate lang1 sentences with their translations, and random lang2 sentences
-        y = torch.LongTensor(bs).random_(2)
-        idx_pos = torch.arange(bs)
-        idx_neg = ((idx_pos + torch.LongTensor(bs).random_(1, bs)) % bs)
-        idx = (y == 1).long() * idx_pos + (y == 0).long() * idx_neg
-        x2, len2 = x2[:, idx], len2[idx]
+        if labels is None:
+            # associate lang1 sentences with either their translation or a random sentence in the batch
+            y = torch.LongTensor(bs).random_(2)
+            idx_pos = torch.arange(bs)
+            idx_neg = ((idx_pos + torch.LongTensor(bs).random_(1, bs)) % bs)
+            idx = (y == 1).long() * idx_pos + (y == 0).long() * idx_neg
+            x2, len2 = x2[:, idx], len2[idx]
+        else:
+            # use user-provided labels
+            y = torch.LongTensor(labels)
+            
 
         # generate batch / cuda
         x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=False)
