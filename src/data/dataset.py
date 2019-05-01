@@ -363,9 +363,13 @@ class ParallelDataset(Dataset):
                 sentence_ids = sentence_ids[:self.max_batch_size]
             pos1 = self.pos1[sentence_ids]
             pos2 = self.pos2[sentence_ids]
+            if self.labels:
+                labels = self.labels[sentence_ids]
+            else:
+                labels = None
             sent1 = self.batch_sentences([self.sent1[a:b] for a, b in pos1])
             sent2 = self.batch_sentences([self.sent2[a:b] for a, b in pos2])
-            yield (sent1, sent2, sentence_ids) if return_indices else (sent1, sent2)
+            yield (sent1, sent2, labels, sentence_ids) if return_indices else (sent1, sent2, labels)
 
     def get_iterator(self, shuffle, group_by_size=False, n_sentences=-1, return_indices=False):
         """
