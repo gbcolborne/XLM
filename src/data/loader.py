@@ -190,9 +190,14 @@ def load_para_data(params, data):
                 continue
 
             # load binarized datasets
-            src_path, tgt_path = params.para_dataset[(src, tgt)][splt]
+            src_path, tgt_path, lab_path = params.para_dataset[(src, tgt)][splt]
             src_data = load_binarized(src_path, params)
             tgt_data = load_binarized(tgt_path, params)
+            if lab_path:
+                labels = open(lab_path).read().split("\t")
+                assert len(labels) == len(src_data["sentences"])
+            else:
+                labels = None
 
             # update dictionary parameters
             set_dico_parameters(params, data, src_data['dico'])
@@ -202,7 +207,7 @@ def load_para_data(params, data):
             dataset = ParallelDataset(
                 src_data['sentences'], src_data['positions'],
                 tgt_data['sentences'], tgt_data['positions'],
-                params
+                params, labels=labels
             )
 
             # remove empty and too long sentences
@@ -297,15 +302,19 @@ def check_data_params(params):
     # check parallel datasets
     required_para_train = set(params.clm_steps + params.mlm_steps + params.pc_steps + params.mt_steps)
     required_para = required_para_train | set([(l2, l3) for _, l2, l3 in params.bt_steps])
-    params.para_dataset = {
-        (src, tgt): {
-            splt: (os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, src)),
-                   os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, tgt)))
-            for splt in ['train', 'valid', 'test']
-            if splt != 'train' or (src, tgt) in required_para_train or (tgt, src) in required_para_train
-        } for src in params.langs for tgt in params.langs
-        if src < tgt and ((src, tgt) in required_para or (tgt, src) in required_para)
-    }
+    params.para_dataset = {}
+    for src in params.langs: 
+        for tgt in params.langs:
+            if src < tgt and ((src, tgt) in required_para or (tgt, src) in required_para):
+                params.para_dataset[(src,tgt)] = {}
+                for splt in ["train", "valid", "test"]:
+                    if splt != 'train' or (src, tgt) in required_para_train or (tgt, src) in required_para_train:
+                        path_src = os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, src)
+                        path_tgt = os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, tgt))
+                        path_lab = os.path.join(params.data_path, '%s.%s-%s.labels' % (splt, src, tgt))
+                        if not os.path.isfile(path_lab):
+                            path_lab = None
+                        params.para_dataset[(src,tgt)][splt] = (path_src, path_tgt, path_lab)
     assert all([all([os.path.isfile(p1) and os.path.isfile(p2) for p1, p2 in paths.values()]) for paths in params.para_dataset.values()])
 
     # check that we can evaluate on BLEU
