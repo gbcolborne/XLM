@@ -109,7 +109,7 @@ class Evaluator(object):
                 lang2_txt = []
 
                 # convert to text
-                for (sent1, len1), (sent2, len2) in self.get_iterator(data_set, lang1, lang2):
+                for (sent1, len1), (sent2, len2), labels in self.get_iterator(data_set, lang1, lang2):
                     lang1_txt.extend(convert_to_text(sent1, len1, self.dico, params))
                     lang2_txt.extend(convert_to_text(sent2, len2, self.dico, params))
 
@@ -220,7 +220,7 @@ class Evaluator(object):
                 positions = None
                 langs = x.clone().fill_(lang1_id) if params.n_langs > 1 else None
             else:
-                (sent1, len1), (sent2, len2) = batch
+                (sent1, len1), (sent2, len2), labels = batch
                 x, lengths, positions, langs = concat_batches(sent1, len1, lang1_id, sent2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
 
             # words to predict
@@ -277,7 +277,7 @@ class Evaluator(object):
                 positions = None
                 langs = x.clone().fill_(lang1_id) if params.n_langs > 1 else None
             else:
-                (sent1, len1), (sent2, len2) = batch
+                (sent1, len1), (sent2, len2), labels = batch
                 x, lengths, positions, langs = concat_batches(sent1, len1, lang1_id, sent2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
 
             # words to predict
@@ -351,7 +351,7 @@ class EncDecEvaluator(Evaluator):
         for batch in self.get_iterator(data_set, lang1, lang2):
 
             # generate batch
-            (x1, len1), (x2, len2) = batch
+            (x1, len1), (x2, len2), labels = batch
             langs1 = x1.clone().fill_(lang1_id)
             langs2 = x2.clone().fill_(lang2_id)
 
