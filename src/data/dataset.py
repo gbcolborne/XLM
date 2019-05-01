@@ -286,6 +286,8 @@ class ParallelDataset(Dataset):
         assert eos <= self.sent2.min() < self.sent2.max()                    # check dictionary indices
         assert self.lengths1.min() > 0                                       # check empty sentences
         assert self.lengths2.min() > 0                                       # check empty sentences
+        if self.labels:
+            assert len(self.pos1) == len(self.labels)
 
     def remove_empty_sentences(self):
         """
@@ -297,6 +299,7 @@ class ParallelDataset(Dataset):
         indices = indices[self.lengths2[indices] > 0]
         self.pos1 = self.pos1[indices]
         self.pos2 = self.pos2[indices]
+        self.labels = self.labels[indices]
         self.lengths1 = self.pos1[:, 1] - self.pos1[:, 0]
         self.lengths2 = self.pos2[:, 1] - self.pos2[:, 0]
         logger.info("Removed %i empty sentences." % (init_size - len(indices)))
@@ -315,6 +318,7 @@ class ParallelDataset(Dataset):
         indices = indices[self.lengths2[indices] <= max_len]
         self.pos1 = self.pos1[indices]
         self.pos2 = self.pos2[indices]
+        self.labels = self.labels[pos1]
         self.lengths1 = self.pos1[:, 1] - self.pos1[:, 0]
         self.lengths2 = self.pos2[:, 1] - self.pos2[:, 0]
         logger.info("Removed %i too long sentences." % (init_size - len(indices)))
@@ -330,6 +334,7 @@ class ParallelDataset(Dataset):
         # sub-select
         self.pos1 = self.pos1[a:b]
         self.pos2 = self.pos2[a:b]
+        self.labels = self.labels[a:b]
         self.lengths1 = self.pos1[:, 1] - self.pos1[:, 0]
         self.lengths2 = self.pos2[:, 1] - self.pos2[:, 0]
 
