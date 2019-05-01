@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
-from apex.fp16_utils import FP16_Optimizer
+
 
 from .utils import get_optimizer, to_cuda, concat_batches
 from .utils import parse_lambda_config, update_lambdas
@@ -103,6 +103,7 @@ class Trainer(object):
         assert module in ['model', 'encoder', 'decoder']
         optimizer = get_optimizer(getattr(self, module).parameters(), self.params.optimizer)
         if self.params.fp16:
+            from apex.fp16_utils import FP16_Optimizer
             optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
         return optimizer
 

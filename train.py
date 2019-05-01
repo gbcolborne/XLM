@@ -17,7 +17,7 @@ from src.model import check_model_params, build_model
 from src.trainer import SingleTrainer, EncDecTrainer
 from src.evaluation.evaluator import SingleEvaluator, EncDecEvaluator
 
-import apex
+
 from src.fp16 import network_to_half
 
 
@@ -233,6 +233,7 @@ def main(params):
     if params.multi_gpu:
         logger.info("Using nn.parallel.DistributedDataParallel ...")
         if params.fp16:
+            import apex
             if params.encoder_only:
                 model = apex.parallel.DistributedDataParallel(model, delay_allreduce=True)
             else:

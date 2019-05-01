@@ -21,7 +21,7 @@ from scipy.stats import spearmanr, pearsonr
 from sklearn.metrics import f1_score, matthews_corrcoef
 
 from src.fp16 import network_to_half
-from apex.fp16_utils import FP16_Optimizer
+
 
 from ..utils import get_optimizer, concat_batches, truncate, to_cuda
 from ..data.dataset import Dataset, ParallelDataset
@@ -105,6 +105,7 @@ class GLUE:
             params.optimizer
         )
         if params.fp16:
+            from apex.fp16_utils import FP16_Optimizer
             self.optimizer = FP16_Optimizer(self.optimizer, dynamic_loss_scale=True)
 
         # train and evaluate the model
