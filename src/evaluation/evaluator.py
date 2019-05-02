@@ -175,6 +175,10 @@ class Evaluator(object):
                 for lang1, lang2 in params.mlm_steps:
                     self.evaluate_mlm(scores, data_set, lang1, lang2)
 
+                # sentence pair classificat task (evaluate accuracy)
+                for lang1, lang2 in params.pc_steps
+                    self.evaluate_pc(scores, data_set, lang1, lang2, eval_bleu)
+
                 # machine translation task (evaluate perplexity and accuracy)
                 for lang1, lang2 in set(params.mt_steps + [(l2, l3) for _, l2, l3 in params.bt_steps]):
                     eval_bleu = params.eval_bleu and params.is_master
@@ -300,6 +304,53 @@ class Evaluator(object):
         acc_name = '%s_%s_mlm_acc' % (data_set, lang1) if lang2 is None else '%s_%s-%s_mlm_acc' % (data_set, lang1, lang2)
         scores[ppl_name] = np.exp(xe_loss / n_words) if n_words > 0 else 1e9
         scores[acc_name] = 100. * n_valid / n_words if n_words > 0 else 0.
+        
+    def evaluate_pc(self, scores, data_set, lang1, lang2):
+        """
+        Evaluate sentence pair classification
+        """
+        params = self.params
+        assert data_set in ['valid', 'test']
+        assert lang1 in params.langs
+        assert lang2 in params.langs
+                    
+        model = self.model if params.encoder_only else self.encoder
+        model.eval()
+        model = model.module if params.multi_gpu else model
+
+        rng = np.random.RandomState(0)
+
+        lang1_id = params.lang2id[lang1]
+        lang2_id = params.lang2id[lang2]
+                   
+        n_sents = 0
+        n_correct = 0
+ 
+        for batch in self.get_iterator(data_set, lang1, lang2, stream=False):
+
+            # batch
+            (sent1, len1), (sent2, len2), labels = batch
+            x, lengths, positions, langs = concat_batches(sent1, len1, lang1_id, sent2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
+            x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
+            y = torch.LongTensor(labels)
+            y = to_cuda(y)
+
+            # get sentence embeddings
+            h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
+
+            # parallel classification
+            CLF_ID1, CLF_ID2 = 8, 9  # very hacky, use embeddings to make weights for the classifier
+            emb = (model.module if params.multi_gpu else model).embeddings.weight
+            pred = F.linear(h, emb[CLF_ID1].unsqueeze(0), emb[CLF_ID2, 0])
+
+            # update stats
+            n_sents += len(y)
+            n_correct += (pred.max(1)[1] == y).sum().item()
+
+        # compute prediction accuracy
+        acc_name = '%s_%s-%s_pc_acc' % (data_set, lang1, lang2)
+        scores[acc_name] = 100. * n_correct / n_sents if n_sents > 0 else 0.
+
 
 
 class SingleEvaluator(Evaluator):
