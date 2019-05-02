@@ -666,14 +666,13 @@ class Trainer(object):
             # use user-provided labels
             y = torch.LongTensor(labels)
             
-
         # generate batch / cuda
         x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=False)
         x, lengths, positions, langs, new_idx = self.round_batch(x, lengths, positions, langs)
         if new_idx is not None:
             y = y[new_idx]
         x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
-        y = to_cuda(y)
+        y = to_cuda(y)[0]
 
         # get sentence embeddings
         h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
