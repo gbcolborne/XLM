@@ -346,8 +346,8 @@ def load_data(params):
     # parallel data summary
     for (src, tgt), v in data['para'].items():
         for data_set in v.keys():
-            data_type = "Para data (%s)" % "WITHOUT labels" if v[data_set].labels is None else "WITH labels" 
-            logger.info('{: <18} - {: >5} - {: >12}:{: >10}'.format(data_type, data_set, '%s-%s' % (src, tgt), len(v[data_set])))
+            data_type = "Para data (%s)" % ("WITHOUT labels" if v[data_set].labels is None else "WITH labels")
+            logger.info('{: <27} - {: >5} - {: >12}:{: >10}'.format(data_type, data_set, '%s-%s' % (src, tgt), len(v[data_set])))
 
     logger.info("")
     return data
