@@ -664,7 +664,7 @@ class Trainer(object):
             x2, len2 = x2[:, idx], len2[idx]
         else:
             # use user-provided labels
-            y = torch.LongTensor(labels)
+            y = torch.ByteTensor(labels)
             
         # generate batch / cuda
         x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=False)
