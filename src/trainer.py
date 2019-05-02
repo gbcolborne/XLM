@@ -673,6 +673,7 @@ class Trainer(object):
         if new_idx is not None:
             y = y[new_idx]
         x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
+        y = to_cuda(y)
 
         # get sentence embeddings
         h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
