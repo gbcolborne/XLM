@@ -230,7 +230,7 @@ def load_para_data(params, data):
             logger.info("")
 
     logger.info("")
-
+    
 
 def check_data_params(params):
     """
@@ -265,7 +265,7 @@ def check_data_params(params):
     assert all([l1 in params.langs and l2 in params.langs for l1, l2 in params.pc_steps])
     assert all([l1 != l2 for l1, l2 in params.pc_steps])
     assert len(params.pc_steps) == len(set(params.pc_steps))
-
+    
     # machine translation steps
     params.mt_steps = [tuple(s.split('-')) for s in params.mt_steps.split(',') if len(s) > 0]
     assert all([len(x) == 2 for x in params.mt_steps])
@@ -298,7 +298,7 @@ def check_data_params(params):
         } for lang in params.langs if lang in required_mono
     }
     assert all([all([os.path.isfile(p) for p in paths.values()]) for paths in params.mono_dataset.values()])
-
+    
     # check parallel datasets
     required_para_train = set(params.clm_steps + params.mlm_steps + params.pc_steps + params.mt_steps)
     required_para = required_para_train | set([(l2, l3) for _, l2, l3 in params.bt_steps])
@@ -309,7 +309,7 @@ def check_data_params(params):
                 params.para_dataset[(src,tgt)] = {}
                 for splt in ["train", "valid", "test"]:
                     if splt != 'train' or (src, tgt) in required_para_train or (tgt, src) in required_para_train:
-                        path_src = os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, src)
+                        path_src = os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, src))
                         path_tgt = os.path.join(params.data_path, '%s.%s-%s.%s.pth' % (splt, src, tgt, tgt))
                         path_lab = os.path.join(params.data_path, '%s.%s-%s.labels' % (splt, src, tgt))
                         if not os.path.isfile(path_lab):
@@ -319,7 +319,7 @@ def check_data_params(params):
 
     # check that we can evaluate on BLEU
     assert params.eval_bleu is False or len(params.mt_steps + params.bt_steps) > 0
-
+                                                
 
 def load_data(params):
     """
@@ -346,7 +346,8 @@ def load_data(params):
     # parallel data summary
     for (src, tgt), v in data['para'].items():
         for data_set in v.keys():
-            logger.info('{: <18} - {: >5} - {: >12}:{: >10}'.format('Parallel data', data_set, '%s-%s' % (src, tgt), len(v[data_set])))
+            data_type = "Para data (%s)" % "WITH labels" if v[data_set].labels else "WITHOUT labels" 
+            logger.info('{: <18} - {: >5} - {: >12}:{: >10}'.format(data_type, data_set, '%s-%s' % (src, tgt), len(v[data_set])))
 
     logger.info("")
     return data
