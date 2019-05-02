@@ -176,7 +176,7 @@ class Evaluator(object):
                     self.evaluate_mlm(scores, data_set, lang1, lang2)
 
                 # sentence pair classificat task (evaluate accuracy)
-                for lang1, lang2 in params.pc_steps
+                for lang1, lang2 in params.pc_steps:
                     self.evaluate_pc(scores, data_set, lang1, lang2, eval_bleu)
 
                 # machine translation task (evaluate perplexity and accuracy)
