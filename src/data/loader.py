@@ -194,7 +194,7 @@ def load_para_data(params, data):
             src_data = load_binarized(src_path, params)
             tgt_data = load_binarized(tgt_path, params)
             if lab_path:
-                labels = np.array([x.strip() for x in open(lab_path)],dtype=np.int)
+                labels = np.array([x.strip() for x in open(lab_path)], dtype=np.int)
                 assert len(labels) == len(src_data["positions"])
             else:
                 labels = None

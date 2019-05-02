@@ -11,6 +11,7 @@ import subprocess
 from collections import OrderedDict
 import numpy as np
 import torch
+from torch.nn import functional as F
 
 from ..utils import to_cuda, restore_segmentation, concat_batches
 
@@ -177,7 +178,7 @@ class Evaluator(object):
 
                 # sentence pair classificat task (evaluate accuracy)
                 for lang1, lang2 in params.pc_steps:
-                    self.evaluate_pc(scores, data_set, lang1, lang2, eval_bleu)
+                    self.evaluate_pc(scores, data_set, lang1, lang2)
 
                 # machine translation task (evaluate perplexity and accuracy)
                 for lang1, lang2 in set(params.mt_steps + [(l2, l3) for _, l2, l3 in params.bt_steps]):
@@ -193,6 +194,8 @@ class Evaluator(object):
                 if len(_mlm_mono) > 0:
                     scores['%s_mlm_ppl' % data_set] = np.mean([scores['%s_%s_mlm_ppl' % (data_set, lang)] for lang in _mlm_mono])
                     scores['%s_mlm_acc' % data_set] = np.mean([scores['%s_%s_mlm_acc' % (data_set, lang)] for lang in _mlm_mono])
+                if len(params.pc_steps):
+                    scores['%s_pc_acc' % data_set] = np.mean([scores['%s_%s-%s_pc_acc' % (data_set, l1, l2)] for (l1,l2) in params.pc_steps]) 
 
         return scores
 
@@ -325,15 +328,15 @@ class Evaluator(object):
                    
         n_sents = 0
         n_correct = 0
- 
+
         for batch in self.get_iterator(data_set, lang1, lang2, stream=False):
 
             # batch
             (sent1, len1), (sent2, len2), labels = batch
             x, lengths, positions, langs = concat_batches(sent1, len1, lang1_id, sent2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
             x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
-            y = torch.LongTensor(labels)
-            y = to_cuda(y)
+            y = torch.ByteTensor(labels)
+            y = to_cuda(y)[0]
 
             # get sentence embeddings
             h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
@@ -345,7 +348,7 @@ class Evaluator(object):
 
             # update stats
             n_sents += len(y)
-            n_correct += (pred.max(1)[1] == y).sum().item()
+            n_correct += ((pred.view(-1) > 0) == y).sum().item()
 
         # compute prediction accuracy
         acc_name = '%s_%s-%s_pc_acc' % (data_set, lang1, lang2)
