@@ -96,7 +96,7 @@ def main(args):
     dico = Dictionary(data["dico_id2word"], data["dico_word2id"], data["dico_counts"])
 
     # Print score
-    for k,v in data["best_metrics"]:
+    for k,v in data["best_metrics"].items():
         print("- {}: {}".format(k,v))
 
     # Fix some of the params we pass to load_data
