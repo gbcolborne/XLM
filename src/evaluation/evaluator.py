@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from ..utils import to_cuda, restore_segmentation, concat_batches
+from ..utils import to_cuda, restore_segmentation, concat_batches, truncate
 
 
 BLEU_SCRIPT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'multi-bleu.perl')
@@ -77,7 +77,7 @@ class Evaluator(object):
             _lang1, _lang2 = (lang1, lang2) if lang1 < lang2 else (lang2, lang1)
             iterator = self.data['para'][(_lang1, _lang2)][data_set].get_iterator(
                 shuffle=False,
-                group_by_size=True,
+                group_by_size=False,
                 n_sentences=n_sentences
             )
 
@@ -333,6 +333,8 @@ class Evaluator(object):
 
             # batch
             (sent1, len1), (sent2, len2), labels = batch
+            sent1, len1 = truncate(sent1, len1, params.max_len, params.eos_index)
+            sent2, len2 = truncate(sent2, len2, params.max_len, params.eos_index)
             x, lengths, positions, langs = concat_batches(sent1, len1, lang1_id, sent2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
             x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
             y = torch.ByteTensor(labels)
