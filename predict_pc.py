@@ -13,6 +13,8 @@ from src.data.loader import load_binarized
 from src.model import build_model
 from src.utils import truncate, concat_batches, to_cuda
 
+TEST_REVERSE = False
+
 def load_data(dir_data, params):
     """
     Load parallel data.
@@ -22,7 +24,6 @@ def load_data(dir_data, params):
     for f in files:
         if f[-4:] == ".pth":
             f = f[:-4]
-        print(f)
         langs, _ = f.split(".")
         src, tgt = langs.split("-")
         lang_pairs.add((src,tgt))
@@ -95,7 +96,8 @@ def main(args):
     dico = Dictionary(data["dico_id2word"], data["dico_word2id"], data["dico_counts"])
 
     # Print score
-    print(data["best_metrics"])
+    for k,v in data["best_metrics"]:
+        print("- {}: {}".format(k,v))
 
     # Fix some of the params we pass to load_data
     params.debug_train = False
@@ -130,6 +132,7 @@ def main(args):
         lang1_id = params.lang2id[src]
         lang2_id = params.lang2id[tgt]
         preds = []
+        diffs = []
         for batch in dataset.get_iterator(False, group_by_size=False, n_sentences=-1, return_indices=False):
             (sent1, len1), (sent2, len2), labels = batch
             sent1, len1 = truncate(sent1, len1, params.max_len, params.eos_index)
@@ -145,12 +148,28 @@ def main(args):
                 pred = torch.sigmoid(pred)
                 pred = pred.view(-1).cpu().numpy().tolist()
                 preds += pred
+            if TEST_REVERSE:
+                # Try reversing order
+                x, lengths, positions, langs = concat_batches(sent2, len2, lang2_id, sent1, len1, lang1_id, params.pad_index, params.eos_index, reset_positions=True)
+                x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
+                with torch.no_grad():
+                    # Get sentence pair embedding
+                    h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
+                    CLF_ID1, CLF_ID2 = 8, 9  # very hacky, use embeddings to make weights for the classifier
+                    emb = (model.module if params.multi_gpu else model).embeddings.weight
+                    pred_rev = F.linear(h, emb[CLF_ID1].unsqueeze(0), emb[CLF_ID2, 0])
+                    pred_rev = torch.sigmoid(pred_rev)
+                    pred_rev = pred_rev.view(-1).cpu().numpy().tolist()
+                    for p, pp in zip(pred, pred_rev):
+                        diffs.append(p-pp)
+
+        if TEST_REVERSE:
+            print("Average absolute diff between score(l1,l2) and score(l2,l1): {}".format(np.mean(np.abs(diffs))))
 
         # Write predictions
         path = os.path.join(args.dump_path, "{}-{}.pred".format(src, tgt))
         with open(path, "w") as f:
             for p in preds:
-                print(p)
                 f.write("{:.8f}\n".format(p))
 
 if __name__ == '__main__':
