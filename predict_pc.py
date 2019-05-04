@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import subprocess
+import time
 import pickle
 import numpy as np
 import torch
@@ -66,7 +67,7 @@ def get_parser():
                         help="Data path")
 
     # batch parameters
-    parser.add_argument("--batch_size", type=int, default=32,
+    parser.add_argument("--batch_size", type=int, default=64,
                         help="Number of sentences per batch")
     return parser
 
@@ -105,6 +106,7 @@ def main(args):
     params.min_count = 0
     params.tokens_per_batch = -1
     params.max_batch_size = args.batch_size
+    params.batch_size = args.batch_size
 
     # load data
     data = load_data(args.data_path, params)
@@ -128,11 +130,14 @@ def main(args):
     # Predict
     model = model.module if params.multi_gpu else model
     model.eval()
+    start = time.time()
     for (src, tgt), dataset in data['para'].items():
+        path = os.path.join(args.dump_path, "{}-{}.pred".format(src, tgt))
+        scores_file = open(path, "w")
         lang1_id = params.lang2id[src]
         lang2_id = params.lang2id[tgt]
-        preds = []
         diffs = []
+        nb_written = 0
         for batch in dataset.get_iterator(False, group_by_size=False, n_sentences=-1, return_indices=False):
             (sent1, len1), (sent2, len2), labels = batch
             sent1, len1 = truncate(sent1, len1, params.max_len, params.eos_index)
@@ -147,9 +152,19 @@ def main(args):
                 pred = F.linear(h, emb[CLF_ID1].unsqueeze(0), emb[CLF_ID2, 0])
                 pred = torch.sigmoid(pred)
                 pred = pred.view(-1).cpu().numpy().tolist()
-                preds += pred
+            for p in pred:
+                scores_file.write("{:.8f}\n".format(p))
+            nb_written += len(pred)
+            if nb_written % 10000 == 0:
+                elapsed = int(time.time() - start)
+                lpss = elapsed % 60
+                lpsm = elapsed // 60
+                lpsh = lpsm // 60
+                lpsm = lpsm % 60
+                print("[{:02d}:{:02d}:{:02d} {}-{}] {}/{} ({:.2f}%) sentences processed".format(lpsh, lpsm, lpss, src, tgt, nb_written, len(dataset), 100*nb_written/len(dataset)))
+
+            # Try reversing order
             if TEST_REVERSE:
-                # Try reversing order
                 x, lengths, positions, langs = concat_batches(sent2, len2, lang2_id, sent1, len1, lang1_id, params.pad_index, params.eos_index, reset_positions=True)
                 x, lengths, positions, langs = to_cuda(x, lengths, positions, langs)
                 with torch.no_grad():
@@ -166,11 +181,7 @@ def main(args):
         if TEST_REVERSE:
             print("Average absolute diff between score(l1,l2) and score(l2,l1): {}".format(np.mean(np.abs(diffs))))
 
-        # Write predictions
-        path = os.path.join(args.dump_path, "{}-{}.pred".format(src, tgt))
-        with open(path, "w") as f:
-            for p in preds:
-                f.write("{:.8f}\n".format(p))
+        scores_file.close()
 
 if __name__ == '__main__':
 
