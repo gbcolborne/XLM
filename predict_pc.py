@@ -78,7 +78,7 @@ def main(args):
         if os.listdir(args.dump_path):
             m = "Directory {} is not empty.".format(args.dump_path)
             raise ValueError(m)
-    if len(args.log_file) and os.path.isfile(args.log_file):
+    if len(args.log_file):
         write_log = True
     else:
         write_log = False
@@ -156,14 +156,14 @@ def main(args):
             for p in pred:
                 scores_file.write("{:.8f}\n".format(p))
             nb_written += len(pred)
-            if nb_written % 10000 == 0:
+            if nb_written % 1000 == 0:
                 elapsed = int(time.time() - start)
                 lpss = elapsed % 60
                 lpsm = elapsed // 60
                 lpsh = lpsm // 60
                 lpsm = lpsm % 60
-                msg = "[{:02d}:{:02d}:{:02d} {}-{}]"
-                msg += " {}/{} ({:.2f}%) sentences processed".format(lpsh, lpsm, lpss, src, tgt, nb_written, len(dataset), 100*nb_written/len(dataset))
+                msg = "[{:02d}:{:02d}:{:02d} {}-{}]".format(lpsh, lpsm, lpss, src, tgt)
+                msg += " {}/{} ({:.2f}%) sentences processed".format(nb_written, len(dataset), 100*nb_written/len(dataset))
                 print(msg)
                 if write_log:
                     with open(args.log_file, "a") as fout:
