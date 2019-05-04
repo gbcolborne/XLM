@@ -61,12 +61,9 @@ def get_parser():
                         help="Model to load")
     parser.add_argument("--dump_path", type=str, required=True,
                         help="Experiment dump path")
-
-    # data
     parser.add_argument("--data_path", type=str, required=True,
                         help="Data path")
-
-    # batch parameters
+    parser.add_argument("--log_file", type=str, default="")
     parser.add_argument("--batch_size", type=int, default=64,
                         help="Number of sentences per batch")
     return parser
@@ -81,7 +78,11 @@ def main(args):
         if os.listdir(args.dump_path):
             m = "Directory {} is not empty.".format(args.dump_path)
             raise ValueError(m)
-            
+    if len(args.log_file) and os.path.isfile(args.log_file):
+        write_log = True
+    else:
+        write_log = False
+
     # load model parameters
     model_dir = os.path.dirname(args.load_model)
     params_path = os.path.join(model_dir, 'params.pkl')
@@ -161,8 +162,12 @@ def main(args):
                 lpsm = elapsed // 60
                 lpsh = lpsm // 60
                 lpsm = lpsm % 60
-                print("[{:02d}:{:02d}:{:02d} {}-{}] {}/{} ({:.2f}%) sentences processed".format(lpsh, lpsm, lpss, src, tgt, nb_written, len(dataset), 100*nb_written/len(dataset)))
-
+                msg = "[{:02d}:{:02d}:{:02d} {}-{}]"
+                msg += " {}/{} ({:.2f}%) sentences processed".format(lpsh, lpsm, lpss, src, tgt, nb_written, len(dataset), 100*nb_written/len(dataset))
+                print(msg)
+                if write_log:
+                    with open(args.log_file, "a") as fout:
+                        fout.write(msg + "\n")
             # Try reversing order
             if TEST_REVERSE:
                 x, lengths, positions, langs = concat_batches(sent2, len2, lang2_id, sent1, len1, lang1_id, params.pad_index, params.eos_index, reset_positions=True)
