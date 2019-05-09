@@ -226,7 +226,9 @@ class Trainer(object):
         except StopIteration:
             iterator = self.get_iterator(iter_name, lang1, lang2, stream)
             x = next(iterator)
-        return x if lang2 is None or lang1 < lang2 else x[::-1]
+        if lang2 is not None and lang1 > lang2:
+            x = (x[1], x[0], x[2])
+        return x 
 
     def word_shuffle(self, x, l):
         """
@@ -388,7 +390,8 @@ class Trainer(object):
             (x1, len1) = self.add_noise(x1, len1)
             x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=False)
         else:
-            (x1, len1), (x2, len2), labels = self.get_batch(name, lang1, lang2)
+            batch = self.get_batch(name, lang1, lang2)
+            (x1, len1), (x2, len2), labels = batch
             x, lengths, positions, langs = concat_batches(x1, len1, lang1_id, x2, len2, lang2_id, params.pad_index, params.eos_index, reset_positions=True)
 
         return x, lengths, positions, langs, (None, None) if lang2 is None else (len1, len2)
