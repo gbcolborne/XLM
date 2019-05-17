@@ -153,8 +153,11 @@ def main(args):
                 pred = F.linear(h, emb[CLF_ID1].unsqueeze(0), emb[CLF_ID2, 0])
                 pred = torch.sigmoid(pred)
                 pred = pred.view(-1).cpu().numpy().tolist()
-            for p in pred:
-                scores_file.write("{:.8f}\n".format(p))
+            for p, l1, l2 in zip(pred, len1, len2):
+                if l1.item() or 0 and l2.item() == 0:
+                    scores_file.write("0.00000000\n")
+                else:
+                    scores_file.write("{:.8f}\n".format(p))
             nb_written += len(pred)
             if nb_written % 1000 == 0:
                 elapsed = int(time.time() - start)

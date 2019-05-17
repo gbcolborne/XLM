@@ -267,7 +267,7 @@ class ParallelDataset(Dataset):
             self.remove_empty_sentences()
 
         # sanity checks
-        self.check()
+        self.check(check_empty=remove_empty)
 
     def __len__(self):
         """
@@ -275,7 +275,7 @@ class ParallelDataset(Dataset):
         """
         return len(self.pos1)
 
-    def check(self):
+    def check(self, check_empty=True):
         """
         Sanity checks.
         """
@@ -285,8 +285,9 @@ class ParallelDataset(Dataset):
         assert len(self.pos2) == (self.sent2[self.pos2[:, 1]] == eos).sum()  # check sentences indices
         assert eos <= self.sent1.min() < self.sent1.max()                    # check dictionary indices
         assert eos <= self.sent2.min() < self.sent2.max()                    # check dictionary indices
-        assert self.lengths1.min() > 0                                       # check empty sentences
-        assert self.lengths2.min() > 0                                       # check empty sentences
+        if check_empty:
+            assert self.lengths1.min() > 0                                       # check empty sentences
+            assert self.lengths2.min() > 0                                       # check empty sentences
         if self.labels is not None:
             assert len(self.pos1) == len(self.labels)
 
