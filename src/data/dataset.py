@@ -242,7 +242,7 @@ class Dataset(object):
 
 class ParallelDataset(Dataset):
 
-    def __init__(self, sent1, pos1, sent2, pos2, params, labels=None):
+    def __init__(self, sent1, pos1, sent2, pos2, params, labels=None, remove_empty=True):
 
         self.eos_index = params.eos_index
         self.pad_index = params.pad_index
@@ -263,7 +263,8 @@ class ParallelDataset(Dataset):
         assert len(self.pos2) == (self.sent2 == self.eos_index).sum()
 
         # remove empty sentences
-        self.remove_empty_sentences()
+        if remove_empty:
+            self.remove_empty_sentences()
 
         # sanity checks
         self.check()

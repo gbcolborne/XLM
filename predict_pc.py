@@ -44,7 +44,7 @@ def load_data(dir_data, params):
         dataset = ParallelDataset(
             src_data['sentences'], src_data['positions'],
             tgt_data['sentences'], tgt_data['positions'],
-            params, labels=None
+            params, labels=None, remove_empty=False
         )
         data["para"][(src, tgt)] = dataset
     return data
