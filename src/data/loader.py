@@ -322,7 +322,7 @@ def check_data_params(params):
         for splt in params.para_dataset[(src, tgt)].keys():
             _, _, path_labels = params.para_dataset[(src,tgt)][splt]
             if path_labels is not None:
-                if (src,tgt) in params.clm_steps or (src,tgt) in params.clm_steps or (tgt,src) in params.mlm_steps or (tgt,src) in params.mlm_steps:
+                if (src,tgt) in params.clm_steps or (tgt,src) in params.clm_steps or (src,tgt) in params.mlm_steps or (tgt,src) in params.mlm_steps:
                     raise NotImplementedError("Can not do CLM or MLM steps on pre-labeled parallel datasets")
 
     # check that we can evaluate on BLEU
