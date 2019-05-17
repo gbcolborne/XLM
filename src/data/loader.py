@@ -265,7 +265,7 @@ def check_data_params(params):
     assert all([l1 in params.langs and l2 in params.langs for l1, l2 in params.pc_steps])
     assert all([l1 != l2 for l1, l2 in params.pc_steps])
     assert len(params.pc_steps) == len(set(params.pc_steps))
-    
+
     # machine translation steps
     params.mt_steps = [tuple(s.split('-')) for s in params.mt_steps.split(',') if len(s) > 0]
     assert all([len(x) == 2 for x in params.mt_steps])
@@ -316,6 +316,14 @@ def check_data_params(params):
                             path_lab = None
                         params.para_dataset[(src,tgt)][splt] = (path_src, path_tgt, path_lab)
     assert all([all([os.path.isfile(p1) and os.path.isfile(p2) for p1, p2, p3 in paths.values()]) for paths in params.para_dataset.values()])
+
+    # Check that we are not going to do mlm steps on labeled para datasets 
+    for (src,tgt) in params.para_dataset.keys():
+        for splt in params.para_dataset[(src, tgt)].keys():
+            _, _, path_labels = params.para_dataset[(src,tgt)][splt]
+            if path_labels is not None:
+                if (src,tgt) in params.clm_steps or (src,tgt) in params.clm_steps or (tgt,src) in params.mlm_steps or (tgt,src) in params.mlm_steps:
+                    raise NotImplementedError("Can not do CLM or MLM steps on pre-labeled parallel datasets")
 
     # check that we can evaluate on BLEU
     assert params.eval_bleu is False or len(params.mt_steps + params.bt_steps) > 0
