@@ -154,7 +154,7 @@ def main(args):
                 pred = torch.sigmoid(pred)
                 pred = pred.view(-1).cpu().numpy().tolist()
             for p, l1, l2 in zip(pred, len1, len2):
-                if l1.item() or 0 and l2.item() == 0:
+                if l1.item() == 0 and l2.item() == 0:
                     scores_file.write("0.00000000\n")
                 else:
                     scores_file.write("{:.8f}\n".format(p))
